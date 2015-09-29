@@ -115,4 +115,12 @@ patch
 >>> b = {'a': {'b': 1, 'c': {}}}
 >>> print dd.diff(a,b)
 [('removed', 'a.c.e', 1)]
+
+# path support '.' in keyname
+>>> a = {'a.b.c': 1, 'a':{'b':{'c':2}}}
+>>> b = {'a.b.c': 2, 'a':{'b':{'c':3}}}
+>>> diff = dd.diff(a, b)
+>>> dd.patch(a, diff)
+>>> print a
+{'a': {'b': {'c': 3}}, 'a.b.c': 2}
 ```
