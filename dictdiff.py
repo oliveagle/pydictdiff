@@ -10,33 +10,6 @@ import weakref
 types_unary = (types.BooleanType, types.IntType, types.LongType, types.FloatType, types.StringType, types.UnicodeType)
 types_array = (types.ListType, types.TupleType)
 
-# class Changes(object):
-#     ctype = "changed"
-#     def __init__(self, ctype, key, unary):
-#         self.ctype = ctype
-#         self.key = key
-#         self.unary = unary
-#     def __str__(self):
-#         return str((self.ctype, self.key, self.unary))
-#     def __unicode__(self):
-#         return unicode((self.ctype, self.key, self.unary))
-
-# class CHANGED(Changes):
-#     def __init__(self, key, frm, to):
-#         self.ctype="changed"
-#         self.key = key
-#         self.unary = (frm, to)
-# class REMOVED(Changes):
-#     def __init__(self, key, v):
-#         self.ctype="removed"
-#         self.key = key
-#         self.unary = v
-# class DELETED(Changes):
-#     def __init__(self, key, v):
-#         self.ctype="deleted"
-#         self.key = key
-#         self.unary = v
-
 def diff(obj1, obj2):
     # slow bud clear version
     flat_dict1 = flatten(obj1)
@@ -128,49 +101,62 @@ def dot_lookup_with_parent(obj, key):
     '''
     assert type(key) in types.StringTypes, "key must be string"
     parent = None
+    last_key = None
 
     steps = key.split(".")
     xobj = obj
+    prev_x = ""
     for x in steps:
-        if len(x) >=3 and x[0]=='[' and x[-1] == ']':
-            idx = int(x[1:-1])
+        if x.endswith("\\"):
+            prev_x += x
+            continue
+        if prev_x != "":
+            _x = prev_x + x
+            _x = _x.replace("\\", ".")
             parent = xobj
-            xobj = xobj[idx]
+            last_key = _x
+            xobj = xobj[_x]
+            prev_x = ""
         else:
-            parent = xobj
-            xobj = xobj[x]
-    return parent, xobj, type(xobj) in types_unary
+            if len(x) >=3 and x[0]=='[' and x[-1] == ']':
+                idx = int(x[1:-1])
+                parent = xobj
+                last_key = idx
+                xobj = xobj[idx]
+            else:
+                parent = xobj
+                last_key = x
+                xobj = xobj[x]
+    return parent, last_key, xobj, type(xobj) in types_unary
 
 
 def patch(obj, diff):
     # slow version
     for chg in diff:
-        print "patch: 0 ", chg
+        logging.debug("patch: 0 ", chg)
         if len(chg)==3:
             action, key, tobe = chg
         
             if action == 'changed':
-                print "patch: 1 ", chg
-                # if len(chg[2])==2 and type(chg[1]) in types.StringTypes:
-                parent, res, is_unary = dot_lookup_with_parent(obj, chg[1])
-                print "patch: 1 ", parent, res, is_unary
+                logging.debug("patch: 1.1 changed - ", chg)
+                parent, k, v, is_unary = dot_lookup_with_parent(obj, chg[1])
+                logging.debug("patch: 1.2 changed - ", parent, k, v, is_unary)
                 if is_unary:
-                    last_key = chg[1].split('.')[-1]
-                    if len(last_key) >=3 and last_key[0]=='[' and last_key[-1] == ']':
-                        idx = int(last_key[1:-1])
+                    if len(k) >=3 and k[0]=='[' and k[-1] == ']':
+                        idx = int(k[1:-1])
                         parent[idx] = chg[2][1]
                     else:
-                        parent[last_key] = chg[2][1]
+                        parent[k] = chg[2][1]
             elif action == 'added':
                 keys = chg[1].rsplit('.', 1)
-                print "patch:2.1 ", keys
-                parent, res, is_unary = dot_lookup_with_parent(obj, keys[0])
-                print "patch:2.2 ", parent, res, is_unary
-                res[keys[1]] = chg[2]
+                logging.debug("patch:2.1 added - ", keys)
+                parent, k, v, is_unary = dot_lookup_with_parent(obj, keys[0])
+                logging.debug("patch:2.2 added - ", parent, k, v, is_unary)
+                v[keys[1]] = chg[2]
             elif action == 'removed':
                 pass
                 keys = chg[1].rsplit('.', 1)
-                print "patch:3.1 ", keys
-                parent, res, is_unary = dot_lookup_with_parent(obj, keys[0])
-                print "patch:3.2 ", parent, res, is_unary
-                res.pop(keys[1])
+                logging.debug("patch:3.1 removed - ", keys)
+                parent, k, v, is_unary = dot_lookup_with_parent(obj, keys[0])
+                logging.debug("patch:3.2 removed - ", parent, k,  v, is_unary)
+                v.pop(keys[1])

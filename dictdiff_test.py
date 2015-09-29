@@ -449,7 +449,7 @@ class DotLookupTest(unittest.TestCase):
     # @unittest.skip("")
     def test_dot_lookup_with_parent_unary_true(self):
         a = {'a': 1}
-        parent, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a')
+        parent, k, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a')
         self.assertTrue(is_unary)
         # when is_unary is true, modification on res will not be reflected on 
         # original object.
@@ -460,7 +460,7 @@ class DotLookupTest(unittest.TestCase):
         self.assertEqual(a['a'], 2)
 
         a = {'a': 'b'}
-        parent, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a')
+        parent, k, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a')
         self.assertTrue(is_unary)
         res = 'c'
         self.assertEqual(a['a'], 'b')
@@ -468,7 +468,7 @@ class DotLookupTest(unittest.TestCase):
         self.assertEqual(a['a'], 'c')
 
         a = {'a': True}
-        parent, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a')
+        parent, k, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a')
         self.assertTrue(is_unary)
         res = False
         self.assertEqual(a['a'], True)
@@ -476,7 +476,7 @@ class DotLookupTest(unittest.TestCase):
         self.assertEqual(a['a'], False)
 
         a = {'a': long(1)}
-        parent, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a')
+        parent, k, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a')
         self.assertTrue(is_unary)
         res = long(2)
         self.assertEqual(a['a'], long(1))
@@ -484,7 +484,7 @@ class DotLookupTest(unittest.TestCase):
         self.assertEqual(a['a'], long(2))
 
         a = {'a': u'中文'}
-        parent, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a')
+        parent, k, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a')
         self.assertTrue(is_unary)
         res = False
         self.assertEqual(a['a'], u'中文')
@@ -505,10 +505,19 @@ class DotLookupTest(unittest.TestCase):
         res = dictdiff.dot_lookup(a, 'a.b.c')
         self.assertEqual(res, 2)
 
+        a = {'a.b.c': 1, 'a': {'b':{'c': 2}}}
+        parent, k, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a\.b\.c')
+        self.assertEqual(res, 1)
+
+        a = {'a.b': {'c': 1}}
+        parent, k, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a\.b.c')
+        self.assertEqual(res, 1)
+        self.assertEqual(parent['c'], 1)
+
     # @unittest.skip("")
     def test_dot_lookup_with_parent_unary_false(self):
         a = {'a': [1, "h", {'b': 2}]}
-        parent, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a')
+        parent, k, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a')
         self.assertFalse(is_unary)
         # when is_unary == false, modifications on res will directly reflected on original
         # object.  but with some exceptions, see below
@@ -536,20 +545,20 @@ class DotLookupTest(unittest.TestCase):
 
         a = {'a': [1, "h", {'b': 2}]}
         # print "parent: %s, res: %s" % (parent, res)
-        parent, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a.[2]')
+        parent, k, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a.[2]')
         self.assertFalse(is_unary)
         res['b'] = 3
         self.assertEqual(a['a'][2]['b'], 3)
 
         a = {'a':{'b':[{'c': [{'d':[{'e': 1, 'f': 2}]}]}]}, 'b': 1}
-        parent, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a.b.[0].c.[0].d.[0]')
+        parent, k, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a.b.[0].c.[0].d.[0]')
         self.assertFalse(is_unary)
         print "parent: %s, res: %s" % (parent, res)
         res['f'] = 100
-        parent, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a.b.[0].c.[0].d.[0].f')
+        parent, k, res, is_unary = dictdiff.dot_lookup_with_parent(a, 'a.b.[0].c.[0].d.[0].f')
         self.assertEqual(res, 100)
 
-class PathTest(unittest.TestCase):
+class PatchTest(unittest.TestCase):
 
     # @unittest.skip("")
     def test_path_1(self):
@@ -613,6 +622,17 @@ class PathTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             dictdiff.dot_lookup(a, 'a.b.[0].c.[0].d.[0].f')
         self.assertEqual(a['b'], 5)
+
+    def test_path_dot_keyname(self):
+        a = {'a.b.c': 1, 'a':{'b':{'c':2}}}
+        b = {'a.b.c': 2, 'a':{'b':{'c':3}}}
+        diff1 = dictdiff.diff(a, b)
+        print diff1
+        print " ------- a: ", a
+        dictdiff.patch(a, diff1)
+        print " ------- a: ", a
+        self.assertEqual(a['a.b.c'], 2)
+        self.assertEqual(a['a']['b']['c'], 3)
 
 
 if __name__ == '__main__':
