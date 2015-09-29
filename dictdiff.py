@@ -77,7 +77,8 @@ def flatten(obj, key=""):
     elif type(obj) == types.DictType:
         for k, v in obj.iteritems():
             if "." in k:
-                raise KeyError("`.` in key name is not allowed")
+                # raise KeyError("`.` in key name is not allowed")
+                k = k.replace(".", "\.")
             nkey = "%s.%s" % (str(key),str(k)) if key != "" else str(k)
             flatten_value = flatten(v, key=nkey)
             if type(flatten_value) == types.DictType:
@@ -102,12 +103,22 @@ def dot_lookup(obj, key):
     steps = key.split(".")
     xobj = copy.deepcopy(obj)
     # xobj = obj
+    prev_x = ""
     for x in steps:
-        if len(x) >=3 and x[0]=='[' and x[-1] == ']':
-            idx = int(x[1:-1])
-            xobj = xobj[idx]
+        if x.endswith("\\"):
+            prev_x += x
+            continue
+        if prev_x != "":
+            _x = prev_x + x
+            _x = _x.replace("\\", ".")
+            xobj = xobj[_x]
+            prev_x = ""
         else:
-            xobj = xobj[x]
+            if len(x) >=3 and x[0]=='[' and x[-1] == ']':
+                idx = int(x[1:-1])
+                xobj = xobj[idx]
+            else:
+                xobj = xobj[x]
     return xobj
 
 def dot_lookup_with_parent(obj, key):

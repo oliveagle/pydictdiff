@@ -4,7 +4,6 @@ pydictdiff
 yet another python dict diff library. it's not designed to solve all cases.
 
 It has many limitations:
-* key name don't support `.`
 * some modifications will be ignored.
 * ...
 
@@ -31,19 +30,17 @@ nested json object.
 
 ```
 
-if keyname within object has dot`.`, we'll raise an error.
+if keyname within object has dot`.`, we will escape it to `\.`.
 ```python
 >>> import dictdiff as dd
 >>> a = {'a.b':1}
->>> b = {'a.b':2}
->>> dd.diff(a,b)
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "dictdiff.py", line 42, in diff
-    flat_dict1 = flatten(obj1)
-  File "dictdiff.py", line 80, in flatten
-    raise KeyError("`.` in key name is not allowed")
-KeyError: '`.` in key name is not allowed'
+>>> dd.flatten(a)
+{'a\\.b': 1}
+
+>>> dd.dot_lookup(a, 'a\\.b')
+1
+>>> dd.dot_lookup(a, 'a\.b')
+1
 
 ```
 

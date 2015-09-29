@@ -57,15 +57,13 @@ class FlattenTest(unittest.TestCase):
         # print fobj
         self.assertEqual(fobj, {})
 
-    # @unittest.skip("")
-    def test_flatten_6(self):
-        # `.` in key name is not allowed
-        obj = {'a.b': {'c':1}}
-        with self.assertRaises(KeyError):
-            fobj = dictdiff.flatten(obj)
-        obj = {'a':{'b':[{'c': [{'d':[{'e': 1, 'f.1': 2}]}]}]}}
-        with self.assertRaises(KeyError):
-            fobj = dictdiff.flatten(obj)
+    def test_flatten_dot_key(self):
+        obj = {'a.b.c': 1, 'a': {'b':{'c': 2}}}
+        fobj = dictdiff.flatten(obj)
+        self.assertEqual(len(fobj), 2)
+        self.assertEqual(fobj.get('a\.b\.c'), 1)
+        self.assertEqual(fobj.get('a.b.c'), 2)
+        
 
     # @unittest.skip("")
     def test_flatten_x(self):
@@ -217,6 +215,36 @@ class DiffTest(unittest.TestCase):
         print diff
         self.assertEqual(diff[0][0], "removed")
         self.assertEqual(diff[1][0], "removed")
+
+    def test_diff_dot_keyname(self):
+        a = {'a.b.c': 1, 'a':{'b':{'c':2}}}
+        b = {'a.b.c': 2, 'a':{'b':{'c':2}}}
+        diff = dictdiff.diff(a,b)
+        self.assertEqual(len(diff), 1)
+        self.assertEqual(diff[0][0], "changed")
+        self.assertEqual(diff[0][1], "a\.b\.c")
+
+        a = {'a.b.c': 1, 'a':{'b':{'c':2}}}
+        b = {'a.b.c': 1, 'a':{'b':{'c':3}}}
+        diff = dictdiff.diff(a,b)
+        self.assertEqual(len(diff), 1)
+        self.assertEqual(diff[0][0], "changed")
+        self.assertEqual(diff[0][1], "a.b.c")
+
+        a = {'a.b.c': 1, 'a':{'b':{'c':2}}}
+        b = {'a.b.c': 2, 'a':{'b':{'c':3}}}
+        diff = dictdiff.diff(a,b)
+        self.assertEqual(len(diff), 2)
+        print diff
+        for x in diff:
+            if x[1] == 'a.b.c':
+                self.assertEqual(x[2][0], 2)
+                self.assertEqual(x[2][1], 3)
+            elif x[1] == 'a\.b\.c':
+                self.assertEqual(x[2][0], 1)
+                self.assertEqual(x[2][1], 2)
+            else:
+                raise("invalid key")
 
     # @unittest.skip("")
     def test_flatten_x(self):
@@ -464,6 +492,19 @@ class DotLookupTest(unittest.TestCase):
         self.assertEqual(a['a'], False)
 
 
+    def test_dot_lookup_with_dot_key(self):
+        a = {'a.b': 1, 'a': {'b': 2}}
+        res = dictdiff.dot_lookup(a, 'a\.b')
+        self.assertEqual(res, 1)
+        res = dictdiff.dot_lookup(a, 'a.b')
+        self.assertEqual(res, 2)
+
+        a = {'a.b.c': 1, 'a': {'b':{'c': 2}}}
+        res = dictdiff.dot_lookup(a, 'a\.b\.c')
+        self.assertEqual(res, 1)
+        res = dictdiff.dot_lookup(a, 'a.b.c')
+        self.assertEqual(res, 2)
+
     # @unittest.skip("")
     def test_dot_lookup_with_parent_unary_false(self):
         a = {'a': [1, "h", {'b': 2}]}
@@ -557,7 +598,7 @@ class PathTest(unittest.TestCase):
         print a
         print "0------------------------"
 
-    # @unittest.skip("")
+#     @unittest.skip("")
     def test_patch_2(self):
         a = {'a':{'b':[{'c': [{'d':[{'e': 1, 'f': 2}]}]}]}, 'b': 1}
         b = {'a':{'b':[{'c': [{'d':[{'e': 1}]}]}]}, 'b': 5}
