@@ -74,8 +74,7 @@ def dot_lookup(obj, key):
     assert type(key) in types.StringTypes, "key must be string"
 
     steps = key.split(".")
-    xobj = copy.deepcopy(obj)
-    # xobj = obj
+    xobj = obj
     prev_x = ""
     for x in steps:
         if x.endswith("\\"):
@@ -92,7 +91,7 @@ def dot_lookup(obj, key):
                 xobj = xobj[idx]
             else:
                 xobj = xobj[x]
-    return xobj
+    return copy.deepcopy(xobj)
 
 def dot_lookup_with_parent(obj, key):
     '''
