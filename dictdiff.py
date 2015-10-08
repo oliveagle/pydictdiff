@@ -4,14 +4,12 @@ __author__ = 'rhtang'
 import types
 import logging
 import copy
-import weakref
-
 
 types_unary = (types.BooleanType, types.IntType, types.LongType, types.FloatType, types.StringType, types.UnicodeType)
 types_array = (types.ListType, types.TupleType)
 
 def diff(obj1, obj2):
-    # slow bud clear version
+    # slow but clear version
     flat_dict1 = flatten(obj1)
     flat_dict2 = flatten(obj2)
     res = []
@@ -28,6 +26,8 @@ def diff(obj1, obj2):
 
 def flatten(obj, key=""):
     '''
+    #internal use only.
+
     >>> flatten({'a': 1})
     {'a': 1}
 
@@ -50,7 +50,6 @@ def flatten(obj, key=""):
     elif type(obj) == types.DictType:
         for k, v in obj.iteritems():
             if "." in k:
-                # raise KeyError("`.` in key name is not allowed")
                 k = k.replace(".", "\.")
             nkey = "%s.%s" % (str(key),str(k)) if key != "" else str(k)
             flatten_value = flatten(v, key=nkey)

@@ -30,7 +30,7 @@ nested json object.
 
 ```
 
-if keyname within object has dot`.`, we will escape it to `\.`.
+if keyname within object has dot`.`, we will escape it to `\.`.  But `.` in keyname is **not recommended**.
 ```python
 >>> import dictdiff as dd
 >>> a = {'a.b':1}
@@ -42,6 +42,16 @@ if keyname within object has dot`.`, we will escape it to `\.`.
 >>> dd.dot_lookup(a, 'a\.b')
 1
 
+# dd.flatten() is an internal helper function. you should not use it directly. 
+>>> a = {'a.b':1, 'a':{'b':2}}
+>>> f1 = dd.flatten(a)
+>>> print f1
+{'a.b': 2, 'a\\.b': 1}
+>>> f2 = dd.flatten(f1)
+>>> print f2
+{'a\\\\.b': 1, 'a\\.b': 2}
+>>> print dd.flatten(f2)
+{'a\\\\.b': 2, 'a\\\\\\.b': 1}
 ```
 
 
